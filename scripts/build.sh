@@ -64,6 +64,9 @@ case "$TARGET" in
   win32-arm64)
     HOST=aarch64-w64-mingw32
     VPX_TARGET=arm64-win64-gcc
+    # Opus has no runtime CPU detection for Windows on ARM; NEON is baseline
+    # on arm64, so build it in unconditionally.
+    OPUS_FLAGS="--disable-rtcd"
     EXE=.exe
     FFMPEG_LDFLAGS="-static"
     FFMPEG_LIBS="-lc++"
@@ -71,6 +74,7 @@ case "$TARGET" in
   *) echo "unknown TARGET: $TARGET" >&2; exit 1 ;;
 esac
 FFMPEG_PLATFORM_FLAGS=${FFMPEG_PLATFORM_FLAGS:-}
+OPUS_FLAGS=${OPUS_FLAGS:-}
 
 mkdir -p "$WORK/src" "$PREFIX" "$OUT"
 
@@ -135,7 +139,7 @@ build_opus() {
   fetch "$OPUS_URL" "$OPUS_SHA256" opus
   cd "$WORK/src/opus"
   ./configure --prefix="$PREFIX" --host="$HOST" --enable-static --disable-shared \
-    --disable-doc --disable-extra-programs
+    --disable-doc --disable-extra-programs $OPUS_FLAGS
   make -j"$JOBS" && make install
 }
 
