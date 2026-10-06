@@ -79,6 +79,23 @@ This copies each target's binaries into its package (restoring the executable
 bit) and sets the same version on every package. The `Build` workflow does
 this on every run, then installs the packed tarballs on each OS and runs them.
 
+## Tests
+
+- [`scripts/smoke-test.sh`](scripts/smoke-test.sh) runs right after each
+  build: it encodes and decodes with every bundled codec and fails if a binary
+  needs a library the OS doesn't ship.
+- [`test/browser.test.mjs`](test/browser.test.mjs) runs against the installed
+  npm package on each OS. Chrome (via Puppeteer) records a canvas animation with
+  `MediaRecorder`; ffmpeg must probe it, extract frames whose pixels match the
+  painted colors, and transcode it with every encoder. Then Chrome plays back
+  VP9 and H.264 files encoded by ffmpeg and checks their pixels too.
+
+  ```sh
+  # in a project with @vramana/ffmpeg installed
+  npm install puppeteer
+  cp <repo>/test/browser.test.mjs . && node --test browser.test.mjs
+  ```
+
 ## Updating FFmpeg or a dependency
 
 Edit the version and checksum in [`versions.sh`](versions.sh). To get the

@@ -137,6 +137,8 @@ jobs:
       run:
         shell: bash
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -162,3 +164,12 @@ jobs:
           npx ffmpeg -hide_banner -version
           npx ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc=duration=1 -c:v libx264 -y out.mp4
           npx ffprobe -hide_banner -loglevel error -show_entries stream=codec_name -of csv=p=0 out.mp4
+
+      # Chrome records a video that ffmpeg must decode, and plays back videos
+      # ffmpeg encoded; see test/browser.test.mjs.
+      - name: Browser round-trip test
+        working-directory: app
+        run: |
+          npm install --no-audit --no-fund puppeteer
+          cp ../test/browser.test.mjs .
+          node --test browser.test.mjs
