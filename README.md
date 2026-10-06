@@ -26,7 +26,7 @@ the binaries run on any x86-64 Linux distribution regardless of its libc.
 ## Getting a build
 
 The [`Build linux-x64`](.github/workflows/build-linux-x64.yml) workflow runs on
-every push to `main`, on pull requests, and on demand (*Actions → Build
+every push, on pull requests, and on demand (*Actions → Build
 linux-x64 → Run workflow*). It uploads an `ffmpeg-linux-x64` artifact
 containing `ffmpeg` and `ffprobe`.
 
