@@ -92,8 +92,18 @@ window.sample = async (src, times) => {
   for (const t of times) {
     video.currentTime = t;
     await new Promise((resolve) => (video.onseeked = resolve));
-    ctx.drawImage(video, 0, 0);
-    pixels.push(Array.from(ctx.getImageData(canvas.width / 2, canvas.height / 2, 1, 1).data.slice(0, 3)));
+    // With GPU decoding (macOS) the frame can reach the canvas a little after
+    // 'seeked'; until then drawImage leaves it transparent. Redraw until the
+    // pixel is opaque. A wrong-colored frame is opaque too, so it still fails.
+    let px;
+    for (let i = 0; i < 40; i++) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0);
+      px = ctx.getImageData(canvas.width / 2, canvas.height / 2, 1, 1).data;
+      if (px[3] === 255) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    pixels.push(Array.from(px.slice(0, 3)));
   }
   return { duration: video.duration, width: video.videoWidth, height: video.videoHeight, pixels };
 };
