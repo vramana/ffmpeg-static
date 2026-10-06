@@ -89,17 +89,36 @@ sha256_check() {
   fi
 }
 
-# fetch <url> <sha256> <dir>: download, verify and unpack into $WORK/src/<dir>
+# fetch <url> <sha256> <dir>: download, verify and unpack into $WORK/src/<dir>.
+# A server can answer 200 with something else (e.g. a bot-check page), so a
+# mismatch is retried and what arrived is printed.
 fetch() {
   archive="$WORK/src/$(basename "$1")"
-  [ -f "$archive" ] || curl -fsSL --retry 5 -o "$archive" "$1"
-  sha256_check "$2" "$archive"
+  attempt=1
+  while :; do
+    [ -f "$archive" ] || curl -fsSL --retry 5 -o "$archive" "$1"
+    sha256_check "$2" "$archive" && break
+    echo "checksum mismatch for $1 (attempt $attempt), received:" >&2
+    head -c 200 "$archive" | tr -c '[:print:]\n' '.' >&2; echo >&2
+    rm -f "$archive"
+    [ "$attempt" -ge 3 ] && return 1
+    attempt=$((attempt + 1))
+    sleep 15
+  done
   rm -rf "$WORK/src/$3" && mkdir -p "$WORK/src/$3"
   tar -xf "$archive" -C "$WORK/src/$3" --strip-components=1
 }
 
+# git_fetch <repo> <commit> <dir>: shallow-fetch exactly that commit into $WORK/src/<dir>.
+git_fetch() {
+  rm -rf "$WORK/src/$3" && git init -q "$WORK/src/$3"
+  git -C "$WORK/src/$3" fetch -q --depth 1 "$1" "$2"
+  git -C "$WORK/src/$3" -c advice.detachedHead=false checkout -q FETCH_HEAD
+  test "$(git -C "$WORK/src/$3" rev-parse HEAD)" = "$2"
+}
+
 build_x264() {
-  fetch "$X264_URL" "$X264_SHA256" x264
+  git_fetch "$X264_GIT" "$X264_COMMIT" x264
   cd "$WORK/src/x264"
   ./configure --prefix="$PREFIX" --host="$HOST" --enable-static --enable-pic --disable-cli
   make -j"$JOBS" && make install
@@ -118,11 +137,8 @@ build_x265() {
 }
 
 build_libvpx() {
-  rm -rf "$WORK/src/libvpx"
-  git -c advice.detachedHead=false clone --depth 1 --branch "v$LIBVPX_VERSION" \
-    "$LIBVPX_GIT" "$WORK/src/libvpx"
+  git_fetch "$LIBVPX_GIT" "$LIBVPX_COMMIT" libvpx
   cd "$WORK/src/libvpx"
-  test "$(git rev-parse HEAD)" = "$LIBVPX_COMMIT"
   ./configure --prefix="$PREFIX" --target="$VPX_TARGET" \
     --enable-static --disable-shared --enable-pic \
     --disable-examples --disable-tools --disable-docs --disable-unit-tests \

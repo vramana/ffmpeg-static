@@ -14,8 +14,8 @@ major platforms, published to npm.
 | License | Binaries: GPL-2.0-or-later (because of x264/x265). This repository's code: MIT |
 | External libs | x264, x265, libvpx (VP8/VP9), LAME (MP3), Opus, dav1d (AV1 decode), zlib |
 
-Every source tarball is verified against a pinned SHA-256 (libvpx is pinned to
-a git commit). All of these libraries are linked statically on every platform.
+Every source tarball is verified against a pinned SHA-256; x264 and libvpx are
+fetched with git at a pinned commit. All of these libraries are linked statically on every platform.
 
 | Target | Runner | How | Runtime dependencies |
 |---|---|---|---|
