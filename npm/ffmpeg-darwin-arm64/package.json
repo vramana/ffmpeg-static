@@ -2,13 +2,21 @@
   "name": "@vramana/ffmpeg-darwin-arm64",
   "version": "0.0.0",
   "description": "Static ffmpeg and ffprobe binaries for darwin-arm64. Install @vramana/ffmpeg instead of depending on this package directly.",
-  "license": "GPL-3.0-or-later",
+  "license": "GPL-2.0-or-later",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vramana/ffmpeg-static.git"
   },
-  "os": ["darwin"],
-  "cpu": ["arm64"],
-  "files": ["ffmpeg", "ffprobe"],
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "ffmpeg",
+    "ffprobe",
+    "THIRD-PARTY-NOTICES.md"
+  ],
   "preferUnplugged": true
 }

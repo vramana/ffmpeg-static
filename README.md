@@ -11,7 +11,7 @@ major platforms, published to npm.
 |---|---|
 | FFmpeg | 9.0.2 (pinned in [`versions.sh`](versions.sh)) |
 | Binaries | `ffmpeg`, `ffprobe` |
-| License | GPL (because of x264/x265) |
+| License | Binaries: GPL-2.0-or-later (because of x264/x265). This repository's code: MIT |
 | External libs | x264, x265, libvpx (VP8/VP9), LAME (MP3), Opus, dav1d (AV1 decode), zlib |
 
 Every source tarball is verified against a pinned SHA-256 (libvpx is pinned to
@@ -100,3 +100,14 @@ this on every run, then installs the packed tarballs on each OS and runs them.
 
 Edit the version and checksum in [`versions.sh`](versions.sh). To get the
 checksum: `curl -fsSL <url> | sha256sum`.
+
+## License
+
+The code in this repository (build scripts, workflows, the `@vramana/ffmpeg`
+JavaScript wrapper, tests) is [MIT](LICENSE).
+
+The FFmpeg binaries it builds are a separate work under the **GPL v2 or later**,
+because FFmpeg is configured with `--enable-gpl` and links x264 and x265. Each
+platform package (`@vramana/ffmpeg-<target>`) ships the GPL text and a
+[third-party notice](npm/binary-license/THIRD-PARTY-NOTICES.md) listing every
+component, its license and where its source lives.

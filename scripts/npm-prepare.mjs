@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Fills the npm/ packages with built binaries and stamps a version on all of them.
+// Fills the npm/ packages with built binaries and their license files, and
+// stamps a version on all of them.
 //
 //   node scripts/npm-prepare.mjs --artifacts <dir> --version <x.y.z> [--allow-missing]
 //
@@ -29,6 +30,8 @@ const mainFile = path.join(npmDir, 'ffmpeg', 'package.json');
 const main = readJson(mainFile);
 const prefix = `${main.name}-`;
 const platformDirs = readdirSync(npmDir).filter((d) => d.startsWith('ffmpeg-'));
+const licenseDir = path.join(npmDir, 'binary-license');
+const LICENSE_FILES = ['LICENSE', 'THIRD-PARTY-NOTICES.md'];
 
 let missing = 0;
 for (const dir of platformDirs) {
@@ -39,7 +42,12 @@ for (const dir of platformDirs) {
     throw new Error(`${pkgFile}: name must be ${prefix + target} and listed in ${mainFile}`);
   }
 
-  for (const file of pkg.files) {
+  // The GPL text and third-party notices ship with every platform package.
+  for (const file of LICENSE_FILES) {
+    copyFileSync(path.join(licenseDir, file), path.join(npmDir, dir, file));
+  }
+
+  for (const file of pkg.files.filter((f) => !LICENSE_FILES.includes(f))) {
     const src = path.join(args.artifacts, `ffmpeg-${target}`, file);
     if (!existsSync(src)) {
       if (!args['allow-missing']) throw new Error(`missing ${src}`);

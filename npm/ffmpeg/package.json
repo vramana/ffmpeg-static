@@ -2,8 +2,13 @@
   "name": "@vramana/ffmpeg",
   "version": "0.0.0",
   "description": "Static ffmpeg and ffprobe binaries for Linux, macOS and Windows",
-  "keywords": ["ffmpeg", "ffprobe", "static", "binary"],
-  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "ffmpeg",
+    "ffprobe",
+    "static",
+    "binary"
+  ],
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vramana/ffmpeg-static.git"
@@ -22,7 +27,12 @@
     "ffmpeg": "bin/ffmpeg.js",
     "ffprobe": "bin/ffprobe.js"
   },
-  "files": ["index.js", "index.mjs", "index.d.ts", "bin/"],
+  "files": [
+    "index.js",
+    "index.mjs",
+    "index.d.ts",
+    "bin/"
+  ],
   "engines": {
     "node": ">=18"
   },

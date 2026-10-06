@@ -27,5 +27,11 @@ execFileSync(ffmpegPath, ['-i', 'in.mov', 'out.mp4']);
 The binaries are installed through `optionalDependencies`, so don't install
 with `--omit=optional`.
 
-Includes x264, x265, libvpx, LAME, Opus and dav1d. Because of x264/x265 the
-binaries are licensed under the GPL.
+Includes x264, x265, libvpx, LAME, Opus and dav1d.
+
+## License
+
+This package (the JavaScript wrapper) is MIT. The binaries in the
+`@vramana/ffmpeg-<platform>` packages are GPL-2.0-or-later, because FFmpeg is
+built with x264 and x265. Each of those packages includes the GPL text and a
+notice listing every component and its source.

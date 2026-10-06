@@ -2,13 +2,21 @@
   "name": "@vramana/ffmpeg-win32-x64",
   "version": "0.0.0",
   "description": "Static ffmpeg and ffprobe binaries for win32-x64. Install @vramana/ffmpeg instead of depending on this package directly.",
-  "license": "GPL-3.0-or-later",
+  "license": "GPL-2.0-or-later",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vramana/ffmpeg-static.git"
   },
-  "os": ["win32"],
-  "cpu": ["x64"],
-  "files": ["ffmpeg.exe", "ffprobe.exe"],
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "ffmpeg.exe",
+    "ffprobe.exe",
+    "THIRD-PARTY-NOTICES.md"
+  ],
   "preferUnplugged": true
 }
