@@ -30,7 +30,7 @@ const mainFile = path.join(npmDir, 'ffmpeg', 'package.json');
 const main = readJson(mainFile);
 const prefix = `${main.name}-`;
 const platformDirs = readdirSync(npmDir).filter((d) => d.startsWith('ffmpeg-'));
-const licenseDir = path.join(npmDir, 'binary-license');
+const licenseDir = path.join(import.meta.dirname, '..', 'licenses', 'binaries');
 const LICENSE_FILES = ['LICENSE', 'THIRD-PARTY-NOTICES.md'];
 
 let missing = 0;

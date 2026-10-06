@@ -109,5 +109,5 @@ JavaScript wrapper, tests) is [MIT](LICENSE).
 The FFmpeg binaries it builds are a separate work under the **GPL v2 or later**,
 because FFmpeg is configured with `--enable-gpl` and links x264 and x265. Each
 platform package (`@vramana/ffmpeg-<target>`) ships the GPL text and a
-[third-party notice](npm/binary-license/THIRD-PARTY-NOTICES.md) listing every
+[third-party notice](licenses/binaries/THIRD-PARTY-NOTICES.md) listing every
 component, its license and where its source lives.
