@@ -14,7 +14,7 @@ OUT=${OUT_DIR:-$ROOT/dist}
 JOBS=${JOBS:-$(nproc)}
 
 apk add --no-cache \
-  build-base linux-headers nasm cmake meson ninja-build pkgconf \
+  build-base linux-headers nasm cmake meson samurai pkgconf \
   git curl perl bash diffutils coreutils file \
   zlib-dev zlib-static
 
@@ -45,9 +45,10 @@ build_x265() {
   mkdir -p "$WORK/src/x265/build-static" && cd "$WORK/src/x265/build-static"
   cmake ../source -G Ninja \
     -DCMAKE_INSTALL_PREFIX="$PREFIX" -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     -DENABLE_SHARED=OFF -DENABLE_CLI=OFF
   ninja -j"$JOBS" && ninja install
+  # x265 advertises -lgcc_s, which has no static archive and breaks -static links.
+  sed -i 's/ -lgcc_s//g' "$PREFIX/lib/pkgconfig/x265.pc"
 }
 
 build_libvpx() {
