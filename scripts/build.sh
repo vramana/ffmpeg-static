@@ -46,7 +46,8 @@ case "$TARGET" in
     VPX_TARGET=arm64-darwin20-gcc
     export MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-11.0}
     FFMPEG_LDFLAGS=""
-    FFMPEG_LIBS="-lc++"
+    # configure enables iconv but doesn't always add -liconv for the final link.
+    FFMPEG_LIBS="-lc++ -liconv"
     # Keep ffmpeg from probing for optional host libraries; enable only
     # what ships with macOS.
     FFMPEG_PLATFORM_FLAGS="--disable-autodetect --enable-zlib --enable-bzlib --enable-iconv
