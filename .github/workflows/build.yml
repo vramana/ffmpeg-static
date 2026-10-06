@@ -1,0 +1,92 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  macos:
+    name: darwin-arm64
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: brew install meson ninja pkgconf
+
+      - name: Build
+        run: TARGET=darwin-arm64 sh scripts/build.sh
+
+      - name: Smoke test
+        run: sh scripts/smoke-test.sh dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-darwin-arm64
+          path: |
+            dist/ffmpeg
+            dist/ffprobe
+          if-no-files-found: error
+
+  windows:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: win32-x64
+            runner: windows-2025
+            msystem: UCRT64
+            cc: gcc
+            cxx: g++
+            tools: toolchain:p cmake:p ninja:p meson:p pkgconf:p zlib:p nasm:p
+          - target: win32-arm64
+            runner: windows-11-arm
+            msystem: CLANGARM64
+            cc: clang
+            cxx: clang++
+            tools: toolchain:p cmake:p ninja:p meson:p pkgconf:p zlib:p
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          install: git make diffutils perl curl tar
+          pacboy: ${{ matrix.tools }}
+
+      - name: Build
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: TARGET=${{ matrix.target }} sh scripts/build.sh
+
+      - name: Smoke test
+        run: sh scripts/smoke-test.sh dist
+
+      # Outside MSYS2 nothing from MinGW is on PATH, so a missing DLL shows up here.
+      - name: Run outside MSYS2
+        shell: pwsh
+        run: |
+          .\dist\ffmpeg.exe -hide_banner -version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          .\dist\ffprobe.exe -hide_banner -version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-${{ matrix.target }}
+          path: |
+            dist/ffmpeg.exe
+            dist/ffprobe.exe
+          if-no-files-found: error

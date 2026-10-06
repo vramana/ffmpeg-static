@@ -5,18 +5,35 @@ set -eu
 DIR=$(cd "${1:-dist}" && pwd)
 FFMPEG="$DIR/ffmpeg"
 FFPROBE="$DIR/ffprobe"
+[ -f "$FFMPEG.exe" ] && FFMPEG="$FFMPEG.exe" && FFPROBE="$FFPROBE.exe"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
 "$FFMPEG" -hide_banner -version
 "$FFPROBE" -hide_banner -version
 
-# Must not depend on any shared library.
-if command -v ldd >/dev/null 2>&1 && ldd "$FFMPEG" 2>&1 | grep -q '=>'; then
-  echo "ffmpeg is dynamically linked:" >&2
-  ldd "$FFMPEG" >&2
-  exit 1
-fi
+# Shared libraries the binary needs, one per line.
+deps() {
+  case "$(uname -s)" in
+    Darwin) otool -L "$1" | tail -n +2 | awk '{print $1}' ;;
+    MINGW*|MSYS*) objdump -p "$1" | awk '/DLL Name:/ {print $3}' ;;
+    *) ldd "$1" 2>&1 | awk '/=>/ {print $1}' ;;
+  esac
+}
+
+# Allowed: nothing on Linux, OS-provided libraries on macOS/Windows.
+# Every DLL MinGW or our builds could add starts with "lib" (libwinpthread,
+# libstdc++, libc++, libx264, ...); Windows system DLLs never do.
+for bin in "$FFMPEG" "$FFPROBE"; do
+  echo "dependencies of $(basename "$bin"):"
+  deps "$bin" | sed 's/^/  /'
+  bad=$(deps "$bin" | grep -Ev '^(/usr/lib/|/System/Library/)' | grep -Ei '^(/|lib)' || true)
+  if [ -n "$bad" ]; then
+    echo "$(basename "$bin") links non-system libraries:" >&2
+    echo "$bad" >&2
+    exit 1
+  fi
+done
 
 # Encode with each external codec, then decode the result back.
 i=0

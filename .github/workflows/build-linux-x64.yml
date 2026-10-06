@@ -1,8 +1,7 @@
 name: Build linux-x64
 
+# Disabled for now: run manually from the Actions tab.
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 jobs:
