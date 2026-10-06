@@ -70,6 +70,9 @@ case "$TARGET" in
     EXE=.exe
     FFMPEG_LDFLAGS="-static"
     FFMPEG_LIBS="-lc++"
+    # On the case-insensitive filesystem, libc++'s <version> resolves to
+    # FFmpeg's top-level VERSION file and breaks this C++ screen-capture filter.
+    FFMPEG_PLATFORM_FLAGS="--disable-filter=gfxcapture"
     ;;
   *) echo "unknown TARGET: $TARGET" >&2; exit 1 ;;
 esac
