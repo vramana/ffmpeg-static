@@ -1,2 +1,7 @@
 dist/
 .build/
+# Binaries are copied in by scripts/npm-prepare.mjs at release time.
+npm/ffmpeg-*/ffmpeg
+npm/ffmpeg-*/ffprobe
+npm/ffmpeg-*/*.exe
+*.tgz

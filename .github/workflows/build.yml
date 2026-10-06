@@ -90,3 +90,75 @@ jobs:
             dist/ffmpeg.exe
             dist/ffprobe.exe
           if-no-files-found: error
+
+  package:
+    name: npm packages
+    needs: [macos, windows]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ffmpeg-*
+          path: artifacts
+
+      # linux-x64 is built by its own (manual) workflow, so allow it to be missing.
+      - name: Prepare packages
+        run: node scripts/npm-prepare.mjs --artifacts artifacts --version 0.0.0-ci.${{ github.run_number }} --allow-missing
+
+      - name: Pack
+        run: |
+          mkdir -p packed
+          for dir in npm/*/; do npm pack --pack-destination packed "./$dir"; done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-packages
+          path: packed/*.tgz
+          if-no-files-found: error
+
+  test-package:
+    name: npm install (${{ matrix.target }})
+    needs: package
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: darwin-arm64, runner: macos-15 }
+          - { target: win32-x64, runner: windows-2025 }
+          - { target: win32-arm64, runner: windows-11-arm }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-packages
+          path: packed
+
+      # The other platforms' packages aren't on the registry; npm skips those
+      # optional dependencies, and the local tarball provides this platform's.
+      - name: Install
+        run: |
+          mkdir app && cd app
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund ../packed/vramana-ffmpeg-0*.tgz ../packed/vramana-ffmpeg-${{ matrix.target }}-*.tgz
+
+      - name: Use the package
+        working-directory: app
+        run: |
+          node -e "const f = require('@vramana/ffmpeg'); console.log(f.ffmpegPath, f.ffprobePath)"
+          node --input-type=module -e "import { ffmpegPath } from '@vramana/ffmpeg'; console.log(ffmpegPath)"
+          npx ffmpeg -hide_banner -version
+          npx ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc=duration=1 -c:v libx264 -y out.mp4
+          npx ffprobe -hide_banner -loglevel error -show_entries stream=codec_name -of csv=p=0 out.mp4

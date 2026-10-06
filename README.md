@@ -60,6 +60,25 @@ TARGET=darwin-arm64 sh scripts/build.sh
 sh scripts/smoke-test.sh dist
 ```
 
+## npm packages
+
+[`npm/`](npm) holds the packages, following the esbuild layout:
+`@vramana/ffmpeg` exports `ffmpegPath`/`ffprobePath` and lists one package per
+target as `optionalDependencies`; each of those declares `os`/`cpu`, so npm
+installs only the matching one. The single `linux-x64` package works on both
+glibc and musl distros because the binary links no libc dynamically.
+
+Binaries aren't committed. At release time:
+
+```sh
+gh run download <run-id> -p 'ffmpeg-*' -D artifacts
+node scripts/npm-prepare.mjs --artifacts artifacts --version <x.y.z>
+```
+
+This copies each target's binaries into its package (restoring the executable
+bit) and sets the same version on every package. The `Build` workflow does
+this on every run, then installs the packed tarballs on each OS and runs them.
+
 ## Updating FFmpeg or a dependency
 
 Edit the version and checksum in [`versions.sh`](versions.sh). To get the
