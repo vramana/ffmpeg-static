@@ -18,7 +18,8 @@ import { ffmpegPath, ffprobePath } from '@vramana/ffmpeg';
 const run = promisify(execFile);
 const dir = mkdtempSync(path.join(tmpdir(), 'ffmpeg-browser-test-'));
 
-// The test video: one second of each color, so a frame at t=i+0.5 must be COLORS[i].
+// The test video: one second of each color. In videos ffmpeg encodes, the
+// frame at t=i+0.5 must be COLORS[i].
 const COLORS = [
   ['red', '#ff0000', [255, 0, 0]],
   ['green', '#00ff00', [0, 255, 0]],
@@ -51,15 +52,19 @@ window.record = async (colors) => {
   recorder.ondataavailable = (e) => chunks.push(e.data);
   const stopped = new Promise((resolve) => (recorder.onstop = resolve));
 
-  const start = performance.now();
+  let start = performance.now();
   const paint = () => {
     const i = Math.min(colors.length - 1, Math.floor((performance.now() - start) / 1000));
     ctx.fillStyle = colors[i];
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
   paint();
-  recorder.start();
   const timer = setInterval(paint, 1000 / 60);
+  // On slow machines the recorder can take a while to capture its first frame;
+  // start the one-second-per-color clock only once it has delivered data.
+  recorder.start(250);
+  await new Promise((resolve) => recorder.addEventListener('dataavailable', resolve, { once: true }));
+  start = performance.now();
   await new Promise((resolve) => setTimeout(resolve, colors.length * 1000 + 200));
   clearInterval(timer);
   recorder.stop();
@@ -162,22 +167,36 @@ const probe = async (file) =>
 
 const codecs = async (file) => (await probe(file)).streams.map((s) => s.codec_name);
 
-// RGB of a frame at time t, by scaling it down to a single pixel.
-async function pixelAt(file, t) {
+// The sequence of COLORS a video shows, sampled by ffmpeg at 10 fps (one
+// pixel per frame), with repeats collapsed and short blips (codec transitions,
+// a late first frame) dropped.
+async function colorSequence(file) {
   const { stdout } = await run(
     ffmpegPath,
-    ['-v', 'error', '-i', file, '-ss', String(t), '-frames:v', '1',
-      '-vf', 'scale=1:1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'],
-    { encoding: 'buffer' },
+    ['-v', 'error', '-i', file, '-vf', 'fps=10,scale=1:1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'],
+    { encoding: 'buffer', maxBuffer: 1 << 20 },
   );
-  assert.equal(stdout.length, 3, `expected one rgb24 pixel at t=${t}`);
-  return [...stdout];
+  const runs = [];
+  for (let i = 0; i + 3 <= stdout.length; i += 3) {
+    const px = [...stdout.subarray(i, i + 3)];
+    const match = COLORS.find(([, , rgb]) => isColor(px, rgb));
+    const name = match ? match[0] : `rgb(${px})`;
+    if (runs.at(-1)?.name === name) runs.at(-1).frames++;
+    else runs.push({ name, frames: 1 });
+  }
+  return runs.filter((r) => r.frames >= 3).map((r) => r.name);
+}
+
+// Chrome's recorder may start late, so only the order of colors is fixed, not their timing.
+async function assertColorSequence(file, where) {
+  assert.deepEqual(await colorSequence(file), COLORS.map(([name]) => name), `${where}: colors`);
 }
 
 // Lossy codecs and color conversion shift values a little.
+const isColor = (actual, expected) => actual.every((v, i) => Math.abs(v - expected[i]) <= 40);
+
 function assertColor(actual, [name, , expected], where) {
-  const ok = actual.every((v, i) => Math.abs(v - expected[i]) <= 40);
-  assert.ok(ok, `${where}: expected ${name} ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+  assert.ok(isColor(actual, expected), `${where}: expected ${name} ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
 }
 
 test('ffprobe reads a WebM recorded by Chrome', async () => {
@@ -197,9 +216,7 @@ test('ffprobe reads a WebM recorded by Chrome', async () => {
 });
 
 test('ffmpeg extracts frames with the colors Chrome painted', async () => {
-  for (const [i, t] of SAMPLE_TIMES.entries()) {
-    assertColor(await pixelAt(recording, t), COLORS[i], `chrome.webm @${t}s`);
-  }
+  await assertColorSequence(recording, 'chrome.webm');
 
   await run(ffmpegPath, ['-v', 'error', '-i', recording, '-vf', 'fps=1', path.join(dir, 'thumb-%d.png')]);
   const thumbs = readdirSync(dir).filter((f) => f.startsWith('thumb-'));
@@ -220,9 +237,7 @@ test('ffmpeg transcodes the recording with every bundled encoder', async () => {
     const out = path.join(dir, name);
     await run(ffmpegPath, ['-v', 'error', '-y', '-i', recording, ...args, out]);
     assert.deepEqual(await codecs(out), expected, name);
-    if (expected.length > 1) {
-      for (const [i, t] of SAMPLE_TIMES.entries()) assertColor(await pixelAt(out, t), COLORS[i], `${name} @${t}s`);
-    }
+    if (expected.length > 1) await assertColorSequence(out, name);
   }
 });
 
