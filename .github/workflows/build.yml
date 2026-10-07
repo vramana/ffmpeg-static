@@ -102,6 +102,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Test color sequence normalization
+        run: node --test test/color-sequence.test.mjs
+
       - uses: actions/download-artifact@v4
         with:
           pattern: ffmpeg-*
@@ -171,5 +174,5 @@ jobs:
         working-directory: app
         run: |
           npm install --no-audit --no-fund puppeteer
-          cp ../test/browser.test.mjs .
+          cp ../test/browser.test.mjs ../test/color-sequence.mjs .
           node --test browser.test.mjs

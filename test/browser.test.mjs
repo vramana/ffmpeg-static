@@ -14,6 +14,7 @@ import { after, before, test } from 'node:test';
 import { promisify } from 'node:util';
 import puppeteer from 'puppeteer';
 import { ffmpegPath, ffprobePath } from '@vramana/ffmpeg';
+import { colorSequenceFromPixels, isColor } from './color-sequence.mjs';
 
 const run = promisify(execFile);
 const dir = mkdtempSync(path.join(tmpdir(), 'ffmpeg-browser-test-'));
@@ -186,24 +187,13 @@ async function colorSequence(file) {
     ['-v', 'error', '-i', file, '-vf', 'fps=10,scale=1:1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'],
     { encoding: 'buffer', maxBuffer: 1 << 20 },
   );
-  const runs = [];
-  for (let i = 0; i + 3 <= stdout.length; i += 3) {
-    const px = [...stdout.subarray(i, i + 3)];
-    const match = COLORS.find(([, , rgb]) => isColor(px, rgb));
-    const name = match ? match[0] : `rgb(${px})`;
-    if (runs.at(-1)?.name === name) runs.at(-1).frames++;
-    else runs.push({ name, frames: 1 });
-  }
-  return runs.filter((r) => r.frames >= 3).map((r) => r.name);
+  return colorSequenceFromPixels(stdout, COLORS);
 }
 
 // Chrome's recorder may start late, so only the order of colors is fixed, not their timing.
 async function assertColorSequence(file, where) {
   assert.deepEqual(await colorSequence(file), COLORS.map(([name]) => name), `${where}: colors`);
 }
-
-// Lossy codecs and color conversion shift values a little.
-const isColor = (actual, expected) => actual.every((v, i) => Math.abs(v - expected[i]) <= 40);
 
 function assertColor(actual, [name, , expected], where) {
   assert.ok(isColor(actual, expected), `${where}: expected ${name} ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
