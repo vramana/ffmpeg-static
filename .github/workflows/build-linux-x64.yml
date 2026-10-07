@@ -1,8 +1,9 @@
 name: Build linux-x64
 
-# Disabled for now: run manually from the Actions tab.
+# Run manually, or as part of the npm release workflow.
 on:
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   build:

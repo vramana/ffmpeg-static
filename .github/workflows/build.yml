@@ -4,6 +4,13 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        description: Version to use for the package installation tests
+        type: string
+        required: false
+        default: ''
 
 jobs:
   macos:
@@ -105,6 +112,9 @@ jobs:
       - name: Test color sequence normalization
         run: node --test test/color-sequence.test.mjs
 
+      - name: Test release validation
+        run: node --test test/npm-release.test.mjs
+
       - uses: actions/download-artifact@v4
         with:
           pattern: ffmpeg-*
@@ -112,7 +122,9 @@ jobs:
 
       # linux-x64 is built by its own (manual) workflow, so allow it to be missing.
       - name: Prepare packages
-        run: node scripts/npm-prepare.mjs --artifacts artifacts --version 0.0.0-ci.${{ github.run_number }} --allow-missing
+        env:
+          PACKAGE_VERSION: ${{ inputs.version || format('0.0.0-ci.{0}', github.run_number) }}
+        run: node scripts/npm-prepare.mjs --artifacts artifacts --version "$PACKAGE_VERSION" --allow-missing
 
       - name: Pack
         run: |
@@ -157,7 +169,7 @@ jobs:
         run: |
           mkdir app && cd app
           npm init -y > /dev/null
-          npm install --no-audit --no-fund ../packed/vramana-ffmpeg-0*.tgz ../packed/vramana-ffmpeg-${{ matrix.target }}-*.tgz
+          npm install --no-audit --no-fund ../packed/vramana-ffmpeg-[0-9]*.tgz ../packed/vramana-ffmpeg-${{ matrix.target }}-*.tgz
 
       - name: Use the package
         working-directory: app
